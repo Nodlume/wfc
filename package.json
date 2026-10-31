@@ -1,0 +1,60 @@
+{
+  "name": "@quokkaquery/wfc",
+  "version": "0.1.0",
+  "description": "Generic Wave Function Collapse solver — pluggable topologies (2D/3D grids, custom graphs), adjacency builders (rules, sockets, learned from samples), overlapping and tiled models, seeded RNG, backtracking",
+  "keywords": [
+    "wave-function-collapse",
+    "wfc",
+    "procedural-generation",
+    "tilemap",
+    "constraint-solver",
+    "texture-synthesis",
+    "game-development",
+    "typescript"
+  ],
+  "homepage": "https://quokkaquery.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Nodlume/wfc.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Nodlume/wfc/issues"
+  },
+  "author": {
+    "name": "QuokkaQuery",
+    "url": "https://quokkaquery.com"
+  },
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "API.md",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}
