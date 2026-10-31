@@ -1,0 +1,85 @@
+name: Publish to npm
+
+# Publishes when the version in package.json changes on main and that
+# version is not yet on the registry. Also runnable by hand.
+on:
+  push:
+    branches: [main]
+    paths: [package.json]
+  workflow_dispatch:
+
+permissions:
+  contents: write   # create the vX.Y.Z tag and GitHub release
+  id-token: write   # npm provenance / trusted publishing (OIDC)
+
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          cache: npm
+
+      - name: Read package name and version
+        id: pkg
+        run: |
+          echo "name=$(node -p 'require("./package.json").name')" >> "$GITHUB_OUTPUT"
+          echo "version=$(node -p 'require("./package.json").version')" >> "$GITHUB_OUTPUT"
+
+      - name: Check whether this version is already published
+        id: check
+        env:
+          NAME: ${{ steps.pkg.outputs.name }}
+          VERSION: ${{ steps.pkg.outputs.version }}
+        run: |
+          if npm view "$NAME@$VERSION" version >/dev/null 2>&1; then
+            echo "$NAME@$VERSION is already on npm; nothing to do."
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "$NAME@$VERSION is not on npm; will publish."
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - if: steps.check.outputs.publish == 'true'
+        run: npm ci
+
+      - if: steps.check.outputs.publish == 'true'
+        run: npm run build
+
+      - if: steps.check.outputs.publish == 'true'
+        run: npm test
+
+      - name: Publish
+        if: steps.check.outputs.publish == 'true'
+        # Uses the NPM_TOKEN secret when set; otherwise falls back to npm
+        # trusted publishing (OIDC), which must be configured for this
+        # package on npmjs.com.
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --provenance --access public
+
+      - name: Tag and create GitHub release
+        if: steps.check.outputs.publish == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NAME: ${{ steps.pkg.outputs.name }}
+          VERSION: ${{ steps.pkg.outputs.version }}
+        run: |
+          TAG="v$VERSION"
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists; skipping release."
+            exit 0
+          fi
+          git config user.name "Nodlume"
+          git config user.email "quokka-factory@quokkaquery.com"
+          git tag -a "$TAG" -m "$NAME $VERSION"
+          git push origin "$TAG"
+          gh release create "$TAG" --title "$NAME $VERSION" --generate-notes
