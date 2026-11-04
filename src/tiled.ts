@@ -1,6 +1,8 @@
+/** Expands socket-based tiles into rotated solver patterns with adjacency for a 4-connected grid. */
 import { adjacencyFromSockets, exactMatch, type AdjacencyTable, type SocketMatch } from './adjacency.js';
 import { DIR4 } from './topology.js';
 
+/** Base tile whose sockets, weight, and payload are used to generate rotated variants. */
 export interface TileDef {
   name: string;
   /** Socket labels on [up, right, down, left] edges. */
@@ -17,6 +19,7 @@ export interface TileDef {
   data?: unknown;
 }
 
+/** Generated solver pattern with rotated sockets and a reference to its base tile. */
 export interface TileVariant {
   /** Pattern index used by the solver. */
   index: number;
@@ -30,6 +33,7 @@ export interface TileVariant {
   data?: unknown;
 }
 
+/** Solver patterns, adjacency, and weights sharing the same pattern indices, with lookup by base tile. */
 export interface Tileset {
   tiles: TileVariant[];
   adjacency: AdjacencyTable;
@@ -38,6 +42,7 @@ export interface Tileset {
   variantsOf(base: number): TileVariant[];
 }
 
+/** Controls socket compatibility, rotation deduplication, and weight allocation across retained variants. */
 export interface TilesetOptions {
   /** Socket matching rule. Default `exactMatch`. */
   match?: SocketMatch;

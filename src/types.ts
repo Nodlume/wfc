@@ -1,3 +1,5 @@
+/** Shared contracts for WFC topology, pattern adjacency, solver options and callback views. */
+
 /** A direction is an integer index into a topology's direction set. */
 export type Direction = number;
 
@@ -31,8 +33,10 @@ export interface Adjacency {
 /** Cell selection strategy used when choosing which cell to observe next. */
 export type Heuristic = 'entropy' | 'mrv' | 'scanline';
 
+/** Solver lifecycle state, including successful completion and contradictory constraints. */
 export type WfcStatus = 'ready' | 'running' | 'done' | 'contradiction';
 
+/** Required cell and pattern constraints, with optional controls for observation and backtracking. */
 export interface WfcOptions {
   topology: Topology;
   adjacency: Adjacency;
@@ -51,6 +55,7 @@ export interface WfcOptions {
   noise?: number;
 }
 
+/** Outcome of a solver step, with optional details about its observation or backtracking. */
 export interface StepResult {
   status: WfcStatus;
   /** Cell observed in this step, if any. */
@@ -61,6 +66,7 @@ export interface StepResult {
   backtracked?: boolean;
 }
 
+/** Controls step limits, retries after contradiction and callbacks during a run. */
 export interface RunOptions {
   /** Abort after this many observation steps. Default: unlimited. */
   maxSteps?: number;

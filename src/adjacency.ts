@@ -1,3 +1,7 @@
+/**
+ * Directional pattern adjacency tables built from explicit rules, matching edge
+ * sockets, or neighboring values observed in a sample topology.
+ */
 import type { Adjacency, Direction, Topology } from './types.js';
 
 /** A rule saying pattern `b` may be placed in `direction` from pattern `a`. */
@@ -98,6 +102,10 @@ export class AdjacencyTable implements Adjacency {
   }
 }
 
+/**
+ * Defines the pattern and direction ranges for explicit rules. Rules are mirrored
+ * through `opposite` unless `symmetric` is false; unlisted pairs remain disallowed.
+ */
 export interface RulesOptions {
   patternCount: number;
   directionCount: number;
@@ -134,6 +142,11 @@ export const flipMatch: SocketMatch = (a, b) => {
   return (af ? a.slice(0, -1) : a) === (bf ? b.slice(0, -1) : b);
 };
 
+/**
+ * Describes each pattern's edge labels and how facing edges are compared. Each
+ * pattern must have `directionCount` sockets; comparisons use `opposite` to find
+ * the neighbor's facing edge.
+ */
 export interface SocketsOptions {
   /** sockets[pattern][direction] = socket label on that edge. */
   sockets: ReadonlyArray<ReadonlyArray<string>>;
@@ -163,6 +176,11 @@ export function adjacencyFromSockets(opts: SocketsOptions): AdjacencyTable {
   return table;
 }
 
+/**
+ * Learned rules and their shared pattern-index mapping. Patterns retain the first
+ * value encountered for each key, with weights and sample indices using the same
+ * mapping.
+ */
 export interface LearnedAdjacency<T> {
   adjacency: AdjacencyTable;
   /** Distinct values in first-seen order; pattern index = position here. */
@@ -173,6 +191,10 @@ export interface LearnedAdjacency<T> {
   indices: Int32Array;
 }
 
+/**
+ * A sample and its neighbor relationships for learning adjacency. Sample length
+ * must equal the topology's size; values sharing a key become one pattern.
+ */
 export interface LearnOptions<T> {
   /** One value per cell of `topology`. */
   sample: ArrayLike<T>;

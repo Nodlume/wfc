@@ -1,24 +1,35 @@
+/**
+ * Builds overlapping WFC models from sample grids, with pattern frequencies,
+ * overlap-based adjacency, and helpers for decoding patterns into sample values.
+ */
 import { AdjacencyTable } from './adjacency.js';
 import { Wfc } from './solver.js';
 import { DIR4, grid2d, type Grid2D } from './topology.js';
 import type { WfcOptions } from './types.js';
 
+/** A rectangular source grid whose values are read in row-major order. */
 export interface Sample<T> {
+  /** Number of values in each row. */
   width: number;
+  /** Number of rows. */
   height: number;
   /** Row-major, `width * height` values. */
   data: ArrayLike<T>;
 }
 
+/** Controls sample pattern extraction and the dimensions and wrapping of the output grid. */
 export interface OverlappingOptions<T> {
+  /** Source values from which patterns and their occurrence weights are learned. */
   sample: Sample<T>;
   /** Pattern size (N×N). Default 3. */
   n?: number;
   /** Treat the sample as wrapping. Default true. */
   periodicInput?: boolean;
-  /** How many of the 8 rotations/reflections to include: 1 none, 2 add horizontal mirror, 4 add 90° rotations, 8 all. Default 8. */
+  /** Number of variants to include, ordered as original, mirror, 90° rotation, its mirror, 180° rotation, its mirror, 270° rotation, its mirror. Default 8. */
   symmetry?: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+  /** Number of output cells in each row; each cell represents a pattern's top-left pixel. */
   width: number;
+  /** Number of output cell rows. */
   height: number;
   /** Output wraps. Default false. */
   periodicOutput?: boolean;
@@ -26,14 +37,19 @@ export interface OverlappingOptions<T> {
   key?: (value: T) => string | number;
 }
 
+/** Extracted patterns and solver inputs, with helpers that interpret each cell by its top-left pixel. */
 export interface OverlappingModel<T> {
+  /** Side length shared by all square patterns. */
   readonly n: number;
   /** Distinct sample values; pattern pixels index into this. */
   readonly colors: T[];
   /** Each pattern is `n*n` color indices, row-major. */
   readonly patterns: number[][];
+  /** Occurrence counts across sampled windows and the selected symmetry variants, including duplicate variants. */
   readonly weights: number[];
+  /** Allowed neighbors in the four cardinal directions, determined by matching overlapping pixels. */
   readonly adjacency: AdjacencyTable;
+  /** Output grid used by every solver created from this model. */
   readonly topology: Grid2D;
   /** Build a solver for this model. Extra options are passed to `Wfc`. */
   createSolver(options?: Omit<WfcOptions, 'topology' | 'adjacency' | 'weights'>): Wfc;
@@ -41,7 +57,7 @@ export interface OverlappingModel<T> {
   decode(result: ArrayLike<number>): (T | undefined)[];
   /** Probability of each color at `cell` given the solver's current superposition. */
   colorDistribution(wfc: Wfc, cell: number): Float64Array;
-  /** Pattern index whose top-left pixel equals a given color — handy for `wfc.set()` constraints. */
+  /** Pattern indices whose top-left pixel equals a given color index — handy for `wfc.set()` constraints. */
   patternsWithColor(colorIndex: number): number[];
 }
 
@@ -49,6 +65,10 @@ export interface OverlappingModel<T> {
  * Build the classic "overlapping" model: every N×N window of the sample becomes
  * a pattern, and two patterns may be neighbors when their overlapping region agrees.
  * Each output cell corresponds to the top-left pixel of the pattern placed there.
+ * Values with the same identity key share a color index; the first value is kept
+ * for decoding. Repeated windows and symmetry variants contribute to weights.
+ * Throws if N is less than 1, the sample data length differs from its area, or
+ * a nonwrapping sample is smaller than a pattern in either dimension.
  */
 export function overlappingModel<T>(opts: OverlappingOptions<T>): OverlappingModel<T> {
   const n = opts.n ?? 3;
@@ -168,6 +188,8 @@ export function overlappingModel<T>(opts: OverlappingOptions<T>): OverlappingMod
  * Parse a multi-line string into a `Sample<string>` of single characters.
  * Blank lines are ignored and common leading indentation is stripped, so
  * indented template literals work. Short rows are padded with spaces.
+ * Trailing whitespace is removed before measuring rows; characters are read as
+ * UTF-16 code units. Throws when no nonblank rows remain.
  */
 export function sampleFromText(text: string): Sample<string> {
   let rows = text

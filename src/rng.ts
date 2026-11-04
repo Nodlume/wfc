@@ -1,3 +1,5 @@
+/** Seeded pseudo-random number generation and masked, weighted index selection. */
+
 /** Deterministic pseudo-random number generator (mulberry32). */
 export interface Rng {
   /** Uniform float in [0, 1). */
@@ -10,6 +12,10 @@ export interface Rng {
   state(): number;
 }
 
+/**
+ * Converts a seed to an unsigned 32-bit value. Numbers use JavaScript's uint32
+ * coercion; strings use FNV-1a over their UTF-16 code units.
+ */
 export function hashSeed(seed: number | string): number {
   if (typeof seed === 'number') return seed >>> 0;
   // FNV-1a over the string
@@ -21,6 +27,11 @@ export function hashSeed(seed: number | string): number {
   return h >>> 0;
 }
 
+/**
+ * Creates a mulberry32 generator with independent state, using the current time
+ * when no seed is supplied. Seeds with the same hash produce the same sequence;
+ * reseeding resets that sequence, while reading the state does not advance it.
+ */
 export function createRng(seed: number | string = Date.now()): Rng {
   let a = hashSeed(seed);
   return {

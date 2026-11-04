@@ -1,3 +1,7 @@
+/**
+ * Grid and explicit-graph topologies with indexed cells, directional neighbors,
+ * and opposite directions; grids optionally wrap across their boundaries.
+ */
 import type { Direction, Topology } from './types.js';
 
 /** Named direction set for 4-connected 2D grids: up, right, down, left. */
@@ -27,6 +31,10 @@ export const DIR6 = {
   BELOW: 5,
 } as const;
 
+/**
+ * Rectangular topology with row-major coordinate conversion. Coordinates and
+ * cell indices passed to the conversion methods are not bounds-checked.
+ */
 export interface Grid2D extends Topology {
   readonly width: number;
   readonly height: number;
@@ -35,6 +43,7 @@ export interface Grid2D extends Topology {
   coords(cell: number): [x: number, y: number];
 }
 
+/** Controls whether grid neighbors wrap at boundaries or return -1 beyond them. */
 export interface GridOptions {
   /** Wrap edges (torus). Default false. */
   periodic?: boolean;
@@ -67,6 +76,10 @@ export function grid2d(width: number, height: number, opts: GridOptions = {}): G
   };
 }
 
+/**
+ * Box topology with row-major cells within each z layer. Coordinates and cell
+ * indices passed to the conversion methods are not bounds-checked.
+ */
 export interface Grid3D extends Topology {
   readonly width: number;
   readonly height: number;
@@ -107,6 +120,10 @@ export function grid3d(width: number, height: number, depth: number, opts: GridO
   };
 }
 
+/**
+ * Explicit directional adjacency for a graph. Each nonnegative edge must have
+ * a reverse edge in its opposite direction; missing entries represent no edge.
+ */
 export interface GraphTopologyOptions {
   size: number;
   directionCount: number;

@@ -1,3 +1,7 @@
+/**
+ * Weighted Wave Function Collapse over arbitrary topologies, with persistent
+ * constraints, bounded backtracking, and retries after contradictions.
+ */
 import { createRng, weightedPick, type Rng } from './rng.js';
 import type {
   Adjacency,
@@ -29,8 +33,10 @@ type Constraint = readonly [kind: 'set' | 'ban', cell: number, pattern: number];
  * Each cell holds a superposition of patterns. Repeatedly the cell with the
  * lowest entropy is *observed* (collapsed to one pattern chosen by weight), and
  * the consequences are *propagated* through the adjacency constraints using
- * AC-4 style support counting. The run ends when every cell holds exactly one
- * pattern (`done`) or some cell holds none (`contradiction`).
+ * AC-4 style support counting. Bounded backtracking can undo failed choices;
+ * `run()` can retry contradictions with new seeds and re-applied constraints.
+ * A solved wave has exactly one pattern per cell (`done`); an unrecovered empty
+ * cell yields `contradiction`. A step-limited run can return before either.
  */
 export class Wfc implements WfcLike {
   readonly topology: Topology;
