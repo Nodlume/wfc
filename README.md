@@ -122,7 +122,11 @@ For a hex grid, build `edges[cell][0..5]` from axial coordinates and pass `oppos
 - **Backtracking snapshots are big**: `cells × patterns × (4·directions + 1)` bytes each. Keep
   `backtrackDepth` around 5–50 and combine with `run({ retries })` for hard inputs.
 - **`sampleFromText` dedents** and pads short rows with spaces, so a space becomes a color if rows are ragged.
-- **Weights must be positive and finite.** Use a tiny weight rather than 0 to make a pattern rare.
+- **Weights must be positive and finite**, and their sum and weight-log-weight sum must remain finite.
+  If construction asks you to rescale them, divide all weights by a common factor to preserve their ratios.
+  Use a tiny weight rather than 0 to make a pattern rare.
+- **Constraints apply after collapse too.** A `set()` or `ban()` that conflicts with the current solution
+  produces `contradiction`; constraints are checked again on reset and retry.
 - **Determinism:** same seed and inputs give the same output. `run({ retries })` draws new seeds from
   the solver's RNG, so retried runs are reproducible too.
 

@@ -27,6 +27,83 @@ function checkerboard() {
 }
 
 describe('Wfc', () => {
+  it('detects conflicting sets after collapse, including reset and retry', () => {
+    const wfc = new Wfc({
+      topology: grid2d(1, 1),
+      adjacency: new AdjacencyTable(2, 4, DIR4.opposite).allowAll(),
+      seed: 1,
+    });
+    wfc.set(0, 0).set(0, 0);
+    expect(wfc.status).toBe('done');
+    wfc.set(0, 1);
+    expect(wfc.status).toBe('contradiction');
+    expect(wfc.reset().status).toBe('contradiction');
+    const retries: number[] = [];
+    expect(wfc.run({ retries: 2, onRetry: n => retries.push(n) })).toBe('contradiction');
+    expect(retries).toEqual([1, 2]);
+  });
+
+  it('honours bans after collapse and replays them on reset', () => {
+    const wfc = new Wfc({
+      topology: grid2d(1, 1),
+      adjacency: new AdjacencyTable(2, 4, DIR4.opposite).allowAll(),
+    });
+    wfc.set(0, 0).ban(0, 1);
+    expect(wfc.status).toBe('done');
+    wfc.ban(0, 0);
+    expect(wfc.status).toBe('contradiction');
+    expect(wfc.reset().status).toBe('contradiction');
+    expect(wfc.clearConstraints().reset().run()).toBe('done');
+  });
+
+  it('does not retain invalid constraints after throwing', () => {
+    const wfc = new Wfc({
+      topology: grid2d(1, 1),
+      adjacency: new AdjacencyTable(2, 4, DIR4.opposite).allowAll(),
+    });
+    expect(() => wfc.set(1, 0)).toThrow(RangeError);
+    expect(() => wfc.ban(0, NaN)).toThrow(RangeError);
+    expect(() => wfc.set(0.5, 0)).toThrow(RangeError);
+    expect(wfc.reset().run()).toBe('done');
+  });
+
+  it('detects empty domains during initialization without propagation', () => {
+    const topology = grid2d(2, 1);
+    const adjacency = new AdjacencyTable(2, 4, DIR4.opposite);
+    const wfc = new Wfc({ topology, adjacency });
+    expect(wfc.status).toBe('contradiction');
+    expect(wfc.reset().status).toBe('contradiction');
+    expect(() => solve({ topology, adjacency })).toThrow(/contradiction/);
+  });
+
+  it('cannot hide an impossible component by pinning an isolated cell', () => {
+    const topology = graphTopology({
+      size: 3, directionCount: 2, opposite: d => 1 - d,
+      edges: [[1, -1], [-1, 0], [-1, -1]],
+    });
+    const wfc = new Wfc({ topology, adjacency: new AdjacencyTable(2, 2, d => 1 - d) });
+    wfc.set(2, 0);
+    expect(wfc.run()).toBe('contradiction');
+    expect(wfc.reset().run()).toBe('contradiction');
+  });
+
+  it('allows empty adjacency when no cell has a neighbor', () => {
+    const result = solve({ topology: grid2d(1, 1), adjacency: new AdjacencyTable(2, 4, DIR4.opposite) });
+    expect(result[0]).toBeGreaterThanOrEqual(0);
+  });
+
+  it.each([[1e308, 1e308], [1e306, 1e306]])('rejects overflowing weight aggregates %j', (...weights) => {
+    expect(() => new Wfc({
+      topology: grid2d(1, 1), adjacency: new AdjacencyTable(2, 4, DIR4.opposite).allowAll(), weights,
+    })).toThrow(/rescale the weights/);
+  });
+
+  it.each([NaN, Infinity, -1])('rejects invalid entropy noise %s', noise => {
+    expect(() => new Wfc({
+      topology: grid2d(1, 1), adjacency: new AdjacencyTable(2, 4, DIR4.opposite).allowAll(), noise,
+    })).toThrow(/noise/);
+  });
+
   it('solves a checkerboard on an even periodic grid', () => {
     const topo = grid2d(8, 8, { periodic: true });
     const result = solve({ topology: topo, adjacency: checkerboard(), seed: 1 });

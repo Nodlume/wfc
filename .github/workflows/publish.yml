@@ -57,6 +57,9 @@ jobs:
       - if: steps.check.outputs.publish == 'true'
         run: npm test
 
+      - if: steps.check.outputs.publish == 'true'
+        run: npm run test:package
+
       - name: Publish
         if: steps.check.outputs.publish == 'true'
         # Uses the NPM_TOKEN secret when set; otherwise falls back to npm

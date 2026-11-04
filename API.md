@@ -19,7 +19,7 @@ interface RunOptions { maxSteps?: number; retries?: number; onStep?(r: StepResul
 
 ```ts
 class Wfc {
-  constructor(options: WfcOptions)                 // throws on direction mismatch / non-positive weight
+  constructor(options: WfcOptions)                 // throws on direction mismatch, invalid weights/aggregates, or invalid noise
   readonly topology; adjacency; cellCount; patternCount; directionCount; heuristic; backtrackDepth; noise
   get status(): WfcStatus; get steps(): number; get backtracks(): number; get seed(): number | string
   possibilities(cell): number[]; remaining(cell): number; isCollapsed(cell): boolean; collapsed(cell): number /* -1 */

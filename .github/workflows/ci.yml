@@ -24,5 +24,5 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm test
-      - name: Check publishable tarball contents
-        run: npm pack --dry-run
+      - name: Check packed ESM and CommonJS consumers
+        run: npm run test:package

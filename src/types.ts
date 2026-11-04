@@ -36,7 +36,7 @@ export type WfcStatus = 'ready' | 'running' | 'done' | 'contradiction';
 export interface WfcOptions {
   topology: Topology;
   adjacency: Adjacency;
-  /** Relative frequency of each pattern. Defaults to uniform. */
+  /** Relative frequency of each pattern. Positive finite values with finite weight/weight-log-weight sums. Defaults to uniform. */
   weights?: ArrayLike<number>;
   /** Seed for the deterministic RNG. Same seed + same inputs = same output. */
   seed?: number | string;
@@ -47,7 +47,7 @@ export interface WfcOptions {
    * 0 (default) disables backtracking — a contradiction ends the run.
    */
   backtrackDepth?: number;
-  /** Random noise added to entropies to break ties. Default 1e-6. */
+  /** Non-negative finite random noise added to entropies to break ties. Default 1e-6. */
   noise?: number;
 }
 

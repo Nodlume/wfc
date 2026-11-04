@@ -84,6 +84,7 @@ export class Wfc implements WfcLike {
     this.heuristic = options.heuristic ?? 'entropy';
     this.backtrackDepth = Math.max(0, options.backtrackDepth ?? 0);
     this.noise = options.noise ?? 1e-6;
+    if (!Number.isFinite(this.noise) || this.noise < 0) throw new RangeError('Wfc: noise must be non-negative and finite');
     this.currentSeed = options.seed ?? Date.now();
     this.rng = createRng(this.currentSeed);
 
@@ -106,6 +107,9 @@ export class Wfc implements WfcLike {
     this.sumOfWeights = sw;
     this.sumOfWeightLogWeights = swlw;
     this.startingEntropy = Math.log(sw) - swlw / sw;
+    if (!Number.isFinite(sw) || !Number.isFinite(swlw) || !Number.isFinite(this.startingEntropy)) {
+      throw new RangeError('Wfc: weight aggregates must be finite; rescale the weights');
+    }
 
     this.propagator = [];
     for (let d = 0; d < D; d++) {
@@ -192,6 +196,7 @@ export class Wfc implements WfcLike {
    * that is re-applied after every `reset()` (and therefore every retry).
    */
   set(cell: number, pattern: number): this {
+    this.checkCell(cell, pattern);
     this.constraints.push(['set', cell, pattern]);
     this.applySet(cell, pattern);
     return this;
@@ -199,6 +204,7 @@ export class Wfc implements WfcLike {
 
   /** Forbid `pattern` in `cell` and propagate. Persistent like `set()`. */
   ban(cell: number, pattern: number): this {
+    this.checkCell(cell, pattern);
     this.constraints.push(['ban', cell, pattern]);
     this.applyBan(cell, pattern);
     return this;
@@ -317,7 +323,11 @@ export class Wfc implements WfcLike {
         const base = (c * T + t) * D;
         for (let d = 0; d < D; d++) {
           if (this.compatible[base + d] === 0) {
-            this.banInternal(c, t);
+            if (!this.banInternal(c, t)) {
+              this.stackSize = 0;
+              this._status = 'contradiction';
+              return;
+            }
             break;
           }
         }
@@ -328,7 +338,7 @@ export class Wfc implements WfcLike {
 
   private applySet(cell: number, pattern: number): void {
     this.checkCell(cell, pattern);
-    if (this._status === 'contradiction' || this._status === 'done') return;
+    if (this._status === 'contradiction') return;
     const base = cell * this.patternCount;
     if (!this.wave[base + pattern]) {
       this._status = 'contradiction';
@@ -341,7 +351,7 @@ export class Wfc implements WfcLike {
 
   private applyBan(cell: number, pattern: number): void {
     this.checkCell(cell, pattern);
-    if (this._status === 'contradiction' || this._status === 'done') return;
+    if (this._status === 'contradiction') return;
     if (!this.wave[cell * this.patternCount + pattern]) return;
     const ok = this.banInternal(cell, pattern) && this.propagate();
     if (!ok) this._status = 'contradiction';
@@ -349,8 +359,8 @@ export class Wfc implements WfcLike {
   }
 
   private checkCell(cell: number, pattern: number): void {
-    if (cell < 0 || cell >= this.cellCount) throw new RangeError(`cell ${cell} out of range`);
-    if (pattern < 0 || pattern >= this.patternCount) throw new RangeError(`pattern ${pattern} out of range`);
+    if (!Number.isInteger(cell) || cell < 0 || cell >= this.cellCount) throw new RangeError(`cell ${cell} out of range`);
+    if (!Number.isInteger(pattern) || pattern < 0 || pattern >= this.patternCount) throw new RangeError(`pattern ${pattern} out of range`);
   }
 
   /** Remove `t` from `cell`. Returns false if the cell is left empty. */
@@ -421,7 +431,7 @@ export class Wfc implements WfcLike {
       if (n === 0) return -2;
       if (n <= 1) continue;
       const score = (this.heuristic === 'mrv' ? n : this.entropies[c]) + this.noise * this.rng.next();
-      if (score < min) {
+      if (best === -1 || score < min) {
         min = score;
         best = c;
       }
@@ -430,7 +440,8 @@ export class Wfc implements WfcLike {
   }
 
   private hasUndecided(): boolean {
-    for (let c = 0; c < this.cellCount; c++) if (this.sumsOfOnes[c] > 1) return true;
+    // An empty domain must never be mistaken for a completed cell.
+    for (let c = 0; c < this.cellCount; c++) if (this.sumsOfOnes[c] !== 1) return true;
     return false;
   }
 
